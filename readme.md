@@ -1,18 +1,16 @@
 # ThinkPad Auto Keyboard Backlighting (tp-auto-kbbl)
 
-`tp-auto-kbbl` is a tool that runs in the background on your Linux laptop.
-It checks for events (default `/dev/input/event3`) and enables backlighting
-whenever you start typing. After typing ends + a short timeout, the backlight
-turns off automatically.
+`tp-auto-kbbl` enables keyboard backlighting whenever you start typing. After typing ends (+ timeout), the backlight turns off automatically. It runs in the background on your Linux laptop and checks for keyboard events (default `/dev/input/event3`).
 
-To keep CPU and RAM usage low I've used [Rust](https://www.rust-lang.org/).
-This is my first project in it, so if spot anything weird – or plain wrong –
-let me know! I'm thankful for any advice.
+It should work on any ThinkPad (tested on a 470s) and probably other laptops as well.
+Let me know if it runs on your device.
+
+To keep CPU/RAM usage low and portability high, I've used [Rust](https://www.rust-lang.org/) for development.
+This is my first project with it, so if spot anything weird – or plain wrong – let me know! I'm thankful for any advice.
 
 ## Warning
 
-`tp-auto-kbbl` works mostly like a keylogger does, so always be sure to check the source code
-and look for anything _iffy_.
+`tp-auto-kbbl` works mostly like a keylogger does (requires root to capture keyboard system-wide events). Always be sure to check the source code.
 
 ## Usage
 
@@ -69,16 +67,16 @@ If not, check if the input device is correct, you may adjust it via the `-d` par
 sudo cp tp-auto-kbbl.service /etc/systemd/system/
 
 # (optional) Check if the parameters are correct
-sudo nano /etc/systemd/system/tp-auto-kbbl.service
+sudo nano /etc/systemd/system/tp-auto-kbbl
 
 # Reload daemons
 sudo systemctl daemon-reload
 
 # Start the service
-sudo systemctl start tp-auto-kbbl.service
+sudo systemctl start tp-auto-kbbl
 
 # Check if the service runs fine
-sudo systemctl status tp-auto-kbbl.service
+sudo systemctl status tp-auto-kbbl
 
 Mär 04 14:02:06 Huffer systemd[1]: Started Auto toggle keyboard back-lighting.
 Mär 04 14:02:06 Huffer tp-auto-kbbl[343]: Input device ID: bus 0x11 vendor 0x1 p
@@ -90,7 +88,7 @@ Mär 04 14:02:09 Huffer tp-auto-kbbl[343]: Setting brightness to 2
 Mär 04 14:02:25 Huffer tp-auto-kbbl[343]: Setting brightness to 0
 
 # Finally enable the service
-sudo systemctl enable tp-auto-kbbl.service
+sudo systemctl enable tp-auto-kbbl
 
 ```
 

@@ -1,5 +1,5 @@
 [Unit]
-Description=Auto toggle keyboard back-lighting
+Description=Auto toggle keyboard backlight
 Documentation=https://github.com/saibotd/tp-auto-kbbl
 After=dbus.service
 
