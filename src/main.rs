@@ -20,47 +20,33 @@ use upower_kbd_backlight::OrgFreedesktopUPowerKbdBacklight;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
-// Because the loop in the main thread *waits* for
-// keyboard events, we use this thread for the actual
-// brightness control
-fn spawn_thread(rx: mpsc::Receiver<Box<[i32]>>) {
+// Because the event loop *waits* for keyboard events, we use a thread
+fn spawn_input_handle(device_file: String, tx: mpsc::Sender<bool>) {
     let _ = thread::spawn(move || {
-        // Setup dbus
-        let conn = Connection::new_system().unwrap();
-        let proxy = conn.with_proxy(
-            "org.freedesktop.UPower",
-            "/org/freedesktop/UPower/KbdBacklight",
-            time::Duration::from_millis(5000),
+        // Open the device file (e.g. /dev/input/event1)
+        let device_file = File::open(&device_file).unwrap_or_else(|e| panic!("{}", e));
+        // Setup evdev
+        let mut device = Device::new().unwrap();
+        device.set_fd(device_file).unwrap();
+        println!(
+            "Input device ID: bus 0x{:x} vendor 0x{:x} product 0x{:x}",
+            device.bustype(),
+            device.vendor_id(),
+            device.product_id()
         );
-        // "val" consists of two values
-        // val[0] is brightness (0-2 on ThinkPads)
-        // val[1] is a timeout in milliseconds
-        let default_val: Box<[i32]> = Box::new([-1, -1]);
-        let mut current_brightness: i32 = -1;
-        let mut val = default_val.clone();
+        println!("Evdev version: {:x}", device.driver_version());
+        println!("Input device name: \"{}\"", device.name().unwrap_or(""));
+        println!("Phys location: {}", device.phys().unwrap_or(""));
+        // Events (key presses) will be stored here
+        let mut event: Result<(ReadStatus, InputEvent), Errno>;
         loop {
-            // Wait 100ms in each loop to limit CPU usage
-            thread::sleep(time::Duration::from_millis(100));
-            // We only care for the LAST submitted action.
-            // Another solution could be an event queue, but nah.
-            for _val in rx.try_iter() {
-                val = _val;
-            }
-            debug!("Action value: {:?}", val);
-            if val[0] < 0 {
-                // Brightness level below zero? Do nothing.
+            // Blocks until a new event is received (waits for key press)
+            event = device.next_event(evdev::ReadFlag::NORMAL | evdev::ReadFlag::BLOCKING);
+            if event.is_err() {
+                debug!("Device event error: {:?}", event.err());
                 continue;
             }
-            if val[1] == 0 && current_brightness != val[0] {
-                // timeout is zero? time to act!
-                println!("Setting brightness to {}", val[0]);
-                current_brightness = val[0];
-                let _ = proxy.set_brightness(val[0]);
-                val = default_val.clone();
-            } else if val[1] > 0 {
-                // Count down, until zero is reached
-                val[1] -= 1;
-            }
+            tx.send(true).unwrap();
         }
     });
 }
@@ -69,43 +55,48 @@ fn main() {
     let config = parse_args();
     debug!("Config: {:?}", config);
 
-    // Open the device file (e.g. /dev/input/event1)
-    let device_file = File::open(&config.device_file).unwrap_or_else(|e| panic!("{}", e));
-    // Setup evdev
-    let mut device = Device::new().unwrap();
-    device.set_fd(device_file).unwrap();
-    println!(
-        "Input device ID: bus 0x{:x} vendor 0x{:x} product 0x{:x}",
-        device.bustype(),
-        device.vendor_id(),
-        device.product_id()
-    );
-    println!("Evdev version: {:x}", device.driver_version());
-    println!("Input device name: \"{}\"", device.name().unwrap_or(""));
-    println!("Phys location: {}", device.phys().unwrap_or(""));
-
-    // Events (key presses) will be stored here
-    let mut event: Result<(ReadStatus, InputEvent), Errno>;
-
-    // Setup messaging channel and spawn thread
+    // Setup messaging channel and spawn input thread
     let (tx, rx) = mpsc::channel();
-    spawn_thread(rx);
+    spawn_input_handle(config.device_file, tx);
 
-    // Set bl to zero
-    tx.send(Box::new([0, 0])).unwrap();
+    // Setup dbus
+    let conn = Connection::new_system().unwrap();
+    let proxy = conn.with_proxy(
+        "org.freedesktop.UPower",
+        "/org/freedesktop/UPower/KbdBacklight",
+        time::Duration::from_millis(5000),
+    );
+
+    let mut key_event = false;
+    let mut timeout = 0;
+    let mut brightness = 0;
+    let mut current_brightness = -1;
     loop {
-        // Blocks, until a new event is received (waits for key press)
-        event = device.next_event(evdev::ReadFlag::NORMAL | evdev::ReadFlag::BLOCKING);
-        if event.is_err() {
-            debug!("Device event error: {:?}", event.err());
+        // Wait 100ms in each loop to limit CPU usage
+        thread::sleep(time::Duration::from_millis(100));
+        // We only care for the LAST keyboard event, if there is any.
+        for msg in rx.try_iter() {
+            key_event = msg;
+        }
+        debug!("e: {:?}, b: {:?}, t: {:?}", key_event, brightness, timeout);
+        if key_event {
+            brightness = config.brightness;
+            timeout = config.timeout * 10;
+            key_event = false;
             continue;
         }
-        // Set brightness to desired value, no delay
-        tx.send(Box::new([config.brightness, 0])).unwrap();
-        // Wait for the value to set in (thread only handles the very last request!)
-        thread::sleep(time::Duration::from_millis(100));
-        // Set bl to 0, delay by timeout
-        tx.send(Box::new([0, config.timeout * 10])).unwrap();
+        if timeout > 0 {
+            // Count down
+            timeout -= 1;
+        } else {
+            // Timeout is zero? Switch lights off
+            brightness = 0;
+        }
+        if brightness != current_brightness {
+            println!("Setting brightness to {}", brightness);
+            proxy.set_brightness(brightness).unwrap();
+            current_brightness = brightness;
+        }
     }
 }
 
