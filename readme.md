@@ -20,16 +20,12 @@ This is my first project with it, so if spot anything weird â€“ or plain wrong â
 Usage: tp-auto-kbbl [options]
 
 Options:
-    -h, --help
-                        prints this help message
-    -v, --version
-                        prints the version
-    -d, --device DEVICE
-                        specify the device file
-    -b, --brightness BRIGHTNESS
-                        target keyboard brightness (1-2)
-    -t, --timeout TIMEOUT
-                        time before the bg light turns off
+    -h, --help          prints this help message
+    -v, --version       prints the version
+    -n, --no-dim        don't dim before bg turns off
+    -d, --device        specify the device file
+    -b, --brightness    target keyboard brightness (1-2)
+    -t, --timeout       time before the bg light turns off
 ```
 
 ## Installation

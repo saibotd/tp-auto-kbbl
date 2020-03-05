@@ -22,6 +22,8 @@ const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 // Because the event loop *waits* for keyboard events, we use a thread
 fn spawn_input_handle(device_file: String, tx: mpsc::Sender<bool>) {
+    // Sleep on the key up event from launch
+    thread::sleep(time::Duration::from_millis(100));
     let _ = thread::spawn(move || {
         // Open the device file (e.g. /dev/input/event1)
         let device_file = File::open(&device_file).unwrap_or_else(|e| panic!("{}", e));
@@ -54,7 +56,6 @@ fn spawn_input_handle(device_file: String, tx: mpsc::Sender<bool>) {
 fn main() {
     let config = parse_args();
     debug!("Config: {:?}", config);
-
     // Setup messaging channel and spawn input thread
     let (tx, rx) = mpsc::channel();
     spawn_input_handle(config.device_file, tx);
@@ -71,6 +72,7 @@ fn main() {
     let mut timeout = 0;
     let mut brightness = 0;
     let mut current_brightness = -1;
+
     loop {
         // Wait 100ms in each loop to limit CPU usage
         thread::sleep(time::Duration::from_millis(100));
@@ -86,6 +88,10 @@ fn main() {
             continue;
         }
         if timeout > 0 {
+            // Dim light
+            if config.dim && config.brightness > 1 && timeout < config.timeout * 10 / 2 {
+                brightness = 1;
+            }
             // Count down
             timeout -= 1;
         } else {
@@ -105,14 +111,16 @@ struct Config {
     device_file: String,
     brightness: i32,
     timeout: i32,
+    dim: bool,
 }
 
 impl Config {
-    fn new(device_file: String, brightness: i32, timeout: i32) -> Self {
+    fn new(device_file: String, brightness: i32, timeout: i32, dim: bool) -> Self {
         Config {
             device_file: device_file,
             brightness: brightness,
             timeout: timeout,
+            dim: dim,
         }
     }
 }
@@ -129,6 +137,7 @@ fn parse_args() -> Config {
     let mut opts = Options::new();
     opts.optflag("h", "help", "prints this help message");
     opts.optflag("v", "version", "prints the version");
+    opts.optflag("n", "no-dim", "don't dim before bg turns off");
     opts.optopt("d", "device", "specify the device file", "DEVICE");
     opts.optopt(
         "b",
@@ -154,6 +163,11 @@ fn parse_args() -> Config {
         exit(0);
     }
 
+    let mut dim = true;
+    if matches.opt_present("n") {
+        dim = false;
+    }
+
     let device_file = matches
         .opt_str("d")
         .unwrap_or("/dev/input/event3".to_string());
@@ -170,5 +184,5 @@ fn parse_args() -> Config {
         .parse()
         .unwrap();
 
-    Config::new(device_file, brightness, timeout)
+    Config::new(device_file, brightness, timeout, dim)
 }
