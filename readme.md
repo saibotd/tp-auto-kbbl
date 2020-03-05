@@ -1,4 +1,6 @@
-# ThinkPad Auto Keyboard Backlighting (tp-auto-kbbl)
+# ⌨️💡 tp-auto-kbbl
+
+## ThinkPad Auto Keyboard Backlight
 
 `tp-auto-kbbl` enables keyboard backlighting whenever you start typing. After typing ends (+ timeout), the backlight turns off automatically. It runs in the background on your Linux laptop and checks for keyboard events (default `/dev/input/event3`).
 
@@ -10,7 +12,7 @@ This is my first project with it, so if spot anything weird – or plain wrong �
 
 ## Warning
 
-`tp-auto-kbbl` works mostly like a keylogger does (requires root to capture keyboard system-wide events). Always be sure to check the source code.
+`tp-auto-kbbl` works similar to a keylogger (requires root to capture keyboard events system-wide). Always be sure to check the source code.
 
 ## Usage
 
@@ -32,8 +34,7 @@ Options:
 
 ## Installation
 
-Download the latest [release](https://github.com/saibotd/tp-auto-kbbl/releases),
-or build it yourself.
+Download the latest [release](https://github.com/saibotd/tp-auto-kbbl/releases), or clone and build it yourself.
 
 ### Copy the binary
 
@@ -67,7 +68,7 @@ If not, check if the input device is correct, you may adjust it via the `-d` par
 sudo cp tp-auto-kbbl.service /etc/systemd/system/
 
 # (optional) Check if the parameters are correct
-sudo nano /etc/systemd/system/tp-auto-kbbl
+sudo nano /etc/systemd/system/tp-auto-kbbl.service
 
 # Reload daemons
 sudo systemctl daemon-reload
