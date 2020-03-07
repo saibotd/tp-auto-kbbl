@@ -68,11 +68,16 @@ fn main() {
         time::Duration::from_millis(5000),
     );
 
+    // Was there an key event?
     let mut key_event = false;
+    // Desired brightness
     let mut brightness = 0;
+    // Current brightness (internal state)
     let mut current_brightness = -1;
+    // timestamp of the last keyboard event
     let mut last_event_ts = time::SystemTime::now();
-    let timeout: u64 = config.timeout as u64;
+    // tick counter for non-lazy hw state reading
+    let mut ticks = 0;
 
     loop {
         // Wait 100ms in each loop to limit CPU usage
@@ -81,19 +86,50 @@ fn main() {
         for msg in rx.try_iter() {
             key_event = msg;
         }
-        debug!("e: {:?}, b: {:?}, t: {:?}", key_event, brightness, timeout);
+        debug!(
+            "e: {:?}, b: {:?}, ts: {:?}",
+            key_event, brightness, last_event_ts
+        );
         if key_event {
             brightness = config.brightness;
             last_event_ts = time::SystemTime::now();
             key_event = false;
         } else {
+            // Elapsed seconds since the last keyboard event
             let es = last_event_ts.elapsed().unwrap().as_secs();
-            if es >= timeout {
+            if es >= config.timeout {
+                // Larger than timeout: Lights off
                 brightness = 0
-            } else if config.dim && config.brightness > 1 && es >= timeout / 2 {
+            } else if config.dim
+                && config.brightness > 1
+                && current_brightness > 1
+                && es >= config.timeout / 2
+            {
+                // Larger than half of timeout: Dim lights
                 brightness = 1
             }
         }
+        // Check the actual hardware state, if not lazy
+        if !config.lazy {
+            // Do this only every second
+            if ticks >= 10 {
+                // The actual brightness might differ, e.g. after standby
+                let actual_brightness = proxy.get_brightness().unwrap();
+                if actual_brightness != current_brightness {
+                    println!(
+                        "Actual brightness differs: {} != {}",
+                        actual_brightness, current_brightness
+                    );
+                    current_brightness = actual_brightness;
+                }
+                // Reset ticks
+                ticks = 0;
+            } else {
+                // Increase ticks
+                ticks += 1;
+            }
+        }
+        // Set backlight brightness
         if brightness != current_brightness {
             println!("Setting brightness to {}", brightness);
             proxy.set_brightness(brightness).unwrap();
@@ -106,17 +142,19 @@ fn main() {
 struct Config {
     device_file: String,
     brightness: i32,
-    timeout: i32,
+    timeout: u64,
     dim: bool,
+    lazy: bool,
 }
 
 impl Config {
-    fn new(device_file: String, brightness: i32, timeout: i32, dim: bool) -> Self {
+    fn new(device_file: String, brightness: i32, timeout: u64, dim: bool, lazy: bool) -> Self {
         Config {
             device_file: device_file,
             brightness: brightness,
             timeout: timeout,
             dim: dim,
+            lazy: lazy,
         }
     }
 }
@@ -134,6 +172,7 @@ fn parse_args() -> Config {
     opts.optflag("h", "help", "prints this help message");
     opts.optflag("v", "version", "prints the version");
     opts.optflag("n", "no-dim", "don't dim before bg turns off");
+    opts.optflag("l", "lazy", "don't check actual hw brightness state");
     opts.optopt("d", "device", "specify the device file", "DEVICE");
     opts.optopt(
         "b",
@@ -164,6 +203,11 @@ fn parse_args() -> Config {
         dim = false;
     }
 
+    let mut lazy = true;
+    if matches.opt_present("l") {
+        lazy = false;
+    }
+
     let device_file = matches
         .opt_str("d")
         .unwrap_or("/dev/input/event3".to_string());
@@ -174,11 +218,11 @@ fn parse_args() -> Config {
         .parse()
         .unwrap();
 
-    let timeout: i32 = matches
+    let timeout: u64 = matches
         .opt_str("t")
         .unwrap_or("15".to_string())
         .parse()
         .unwrap();
 
-    Config::new(device_file, brightness, timeout, dim)
+    Config::new(device_file, brightness, timeout, dim, lazy)
 }

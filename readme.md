@@ -23,6 +23,7 @@ Options:
     -h, --help          prints this help message
     -v, --version       prints the version
     -n, --no-dim        don't dim before bg turns off
+    -l, --lazy          don't check actual hw brightness state
     -d, --device        specify the device file
     -b, --brightness    target keyboard brightness (1-2)
     -t, --timeout       time before the bg light turns off

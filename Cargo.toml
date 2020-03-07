@@ -1,6 +1,6 @@
 [package]
 name = "tp-auto-kbbl"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["Tobias Dühr <tobiasduehr@gmail.com>"]
 edition = "2018"
 
