@@ -69,9 +69,10 @@ fn main() {
     );
 
     let mut key_event = false;
-    let mut timeout = 0;
     let mut brightness = 0;
     let mut current_brightness = -1;
+    let mut last_event_ts = time::SystemTime::now();
+    let timeout: u64 = config.timeout as u64;
 
     loop {
         // Wait 100ms in each loop to limit CPU usage
@@ -83,20 +84,15 @@ fn main() {
         debug!("e: {:?}, b: {:?}, t: {:?}", key_event, brightness, timeout);
         if key_event {
             brightness = config.brightness;
-            timeout = config.timeout * 10;
+            last_event_ts = time::SystemTime::now();
             key_event = false;
-            continue;
-        }
-        if timeout > 0 {
-            // Dim light
-            if config.dim && config.brightness > 1 && timeout < config.timeout * 10 / 2 {
-                brightness = 1;
-            }
-            // Count down
-            timeout -= 1;
         } else {
-            // Timeout is zero? Switch lights off
-            brightness = 0;
+            let es = last_event_ts.elapsed().unwrap().as_secs();
+            if es >= timeout {
+                brightness = 0
+            } else if config.dim && config.brightness > 1 && es >= timeout / 2 {
+                brightness = 1
+            }
         }
         if brightness != current_brightness {
             println!("Setting brightness to {}", brightness);
