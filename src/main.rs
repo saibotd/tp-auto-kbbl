@@ -203,9 +203,9 @@ fn parse_args() -> Config {
         dim = false;
     }
 
-    let mut lazy = true;
+    let mut lazy = false;
     if matches.opt_present("l") {
-        lazy = false;
+        lazy = true;
     }
 
     let device_file = matches
