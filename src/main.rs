@@ -198,15 +198,9 @@ fn parse_args() -> Config {
         exit(0);
     }
 
-    let mut dim = true;
-    if matches.opt_present("n") {
-        dim = false;
-    }
+    let dim = !matches.opt_present("n");
 
-    let mut lazy = false;
-    if matches.opt_present("l") {
-        lazy = true;
-    }
+    let lazy = matches.opt_present("l");
 
     let device_file = matches
         .opt_str("d")
@@ -214,15 +208,13 @@ fn parse_args() -> Config {
 
     let brightness: i32 = matches
         .opt_str("b")
-        .unwrap_or("2".to_string())
-        .parse()
-        .unwrap();
+        .map(|s| s.parse().unwrap())
+        .unwrap_or(2);
 
     let timeout: u64 = matches
         .opt_str("t")
-        .unwrap_or("15".to_string())
-        .parse()
-        .unwrap();
+        .map(|s| s.parse().unwrap())
+        .unwrap_or(15);
 
     Config::new(device_file, brightness, timeout, dim, lazy)
 }
