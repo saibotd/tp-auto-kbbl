@@ -9,6 +9,8 @@ repository = "git@github.com:saibotd/tp-auto-kbbl.git"
 readme = "readme.md"
 documentation = "https://github.com/saibotd/tp-auto-kbbl/blob/master/readme.md"
 description = "Auto toggle keyboard back-lighting on Thinkpads (and maybe other laptops) for Linux"
+categories = ["command-line-utilities"]
+keywords = ["tool", "thinkpad"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
