@@ -91,7 +91,12 @@ fn main() {
             key_event, brightness, last_event_ts
         );
         if key_event {
-            brightness = config.brightness;
+            brightness = 1;
+            if current_brightness > 0 {
+                brightness = config.brightness;
+            } else {
+                thread::sleep(time::Duration::from_millis(250));
+            }
             last_event_ts = time::SystemTime::now();
             key_event = false;
         } else {
