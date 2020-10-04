@@ -1,6 +1,6 @@
 [package]
 name = "tp-auto-kbbl"
-version = "0.1.4"
+version = "0.1.5"
 authors = ["Tobias Dühr <tobiasduehr@gmail.com>"]
 edition = "2018"
 homepage = "https://github.com/saibotd/tp-auto-kbbl"

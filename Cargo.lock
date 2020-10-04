@@ -104,7 +104,7 @@ checksum = "d36492546b6af1463394d46f0c834346f31548646f6ba10849802c9c9a27ac33"
 
 [[package]]
 name = "tp-auto-kbbl"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "dbus",
  "evdev-rs",
