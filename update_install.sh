@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 echo "
 [1/6] Bulding release"

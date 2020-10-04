@@ -9,7 +9,7 @@ extern crate log;
 use dbus::blocking::Connection;
 use evdev::*;
 use getopts::Options;
-use nix::errno::Errno;
+use std::io;
 use std::fs::File;
 use std::process::exit;
 use std::sync::mpsc;
@@ -40,10 +40,10 @@ fn spawn_input_handle(device_file: String, tx: mpsc::Sender<bool>) {
         println!("Input device name: \"{}\"", device.name().unwrap_or(""));
         println!("Phys location: {}", device.phys().unwrap_or(""));
         // Events (key presses) will be stored here
-        let mut event: Result<(ReadStatus, InputEvent), Errno>;
+        let mut event: io::Result<(ReadStatus, InputEvent)>;
         loop {
             // Blocks until a new event is received (waits for key press)
-            event = device.next_event(evdev::ReadFlag::NORMAL | evdev::ReadFlag::BLOCKING);
+            event = device.next_event(ReadFlag::NORMAL | ReadFlag::BLOCKING);
             if event.is_err() {
                 debug!("Device event error: {:?}", event.err());
                 continue;
